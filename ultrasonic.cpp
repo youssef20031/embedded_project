@@ -27,14 +27,11 @@ uint32_t Ultrasonic_GetDistance(void) {
     // Trigger the sensor
     Ultrasonic_Trigger();
 
-    printf("Here \n");
-
     // Wait for the echo to start
-    while (gpio_get(ECHO_PIN) == 0)
-        printf("Help meeee! \n");
+    while (gpio_get(ECHO_PIN) == 0);
 
-    // Measure the duration of the echo pulse
     absolute_time_t start_time = get_absolute_time();
+    // Wait for the echo to end
     while (gpio_get(ECHO_PIN) == 1);
     absolute_time_t end_time = get_absolute_time();
 
@@ -43,6 +40,8 @@ uint32_t Ultrasonic_GetDistance(void) {
 
     // Calculate the distance in centimeters
     uint32_t distance = (duration / 2) / 29.1;
+
+    printf("Distance: %d cm\n", distance);
 
     return distance;
 }

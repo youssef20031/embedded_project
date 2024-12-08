@@ -9,23 +9,23 @@
 #include "microphone.h"
 
 // GPIO pin definitions
-#define MOTOR_ENABLE_PIN 2
-#define MOTOR_IN1_PIN 3
-#define MOTOR_IN2_PIN 4
+#define MOTOR_ENABLE_PIN 21
+#define MOTOR_IN1_PIN 20
+#define MOTOR_IN2_PIN 19
 #define SERVO_PIN 5
 #define IR_SENSOR_PIN 6
-#define MICROPHONE_PIN 7
+#define MICROPHONE_PIN 25
 
 // Flag to indicate if the system should pause
 volatile bool system_pause = false;
 
 // Interrupt handler for the microphone
 void microphone_isr(uint gpio, uint32_t events) {
-    if (events & GPIO_IRQ_EDGE_RISE) {
+    if (events & GPIO_IRQ_EDGE_FALL) {
         system_pause = true;  // Pause the system when sound is detected
         printf("System paused by microphone interrupt.\n");
     }
-    if (events & GPIO_IRQ_EDGE_FALL) {
+    if (events & GPIO_IRQ_EDGE_RISE) {
         system_pause = false; // Resume the system when sound stops
         printf("System resumed.\n");
     }
