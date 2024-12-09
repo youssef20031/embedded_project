@@ -1,5 +1,9 @@
 // nano.cpp
 
+#include "FreeRTOS.h"
+#include "task.h"
+#include "queue.h"
+#include "semphr.h"
 #include "pico/stdlib.h"
 #include <stdio.h>
 #include "motor.h"
@@ -16,71 +20,124 @@
 #define IR_SENSOR_PIN 6
 #define MICROPHONE_PIN 25
 
-// Flag to indicate if the system should pause
-volatile bool system_pause = false;
+// Task handles
+static TaskHandle_t xControlTaskHandle = NULL;
+static TaskHandle_t xMicrophoneTaskHandle = NULL;
 
-// Interrupt handler for the microphone
-void microphone_isr(uint gpio, uint32_t events) {
-    if (events & GPIO_IRQ_EDGE_RISE) {
-        system_pause = true;  // Pause the system when sound is detected
-        printf("System paused by microphone interrupt.\n");
+// Queue handle
+static QueueHandle_t xCommandQueue = NULL;
+
+// Command types
+typedef enum {
+    CMD_PAUSE,
+    CMD_RESUME
+} Command_t;
+
+// Device instances
+static L298NMotor *motor;
+static MG90SServo *servo;
+static DigitalMicrophone *mic;
+
+// Task for motor control and sensor readings
+void vControlTask(void *pvParameters) {
+    while(1) {
+        Command_t cmd;
+        
+        // Check for commands
+        if(xQueueReceive(xCommandQueue, &cmd, 0) == pdTRUE) {
+            if(cmd == CMD_PAUSE) {
+                motor->stop();
+                servo->setPosition(1500);
+                continue;
+            }
+        }
+
+        // Normal operation
+        uint32_t distance = Ultrasonic_GetDistance();
+        int ir_value = infrared_sensor_read();
+        printf("Distance: %u cm, IR: %d\n", distance, ir_value);
+
+        if (distance < 20) {
+            motor->stop();
+            if (ir_value) {
+                servo->setPosition(2500);
+                printf("Turning left\n");
+            } else {
+                servo->setPosition(0);
+                printf("Turning right\n");
+            }
+        } else {
+            motor->enable();
+            servo->setPosition(1500);
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
-    if (events & GPIO_IRQ_EDGE_FALL) {
-        //system_pause = false; // Resume the system when sound stops
-        printf("System resumed.\n");
+}
+
+// Task for microphone monitoring
+void vMicrophoneTask(void *pvParameters) {
+    Command_t cmd;
+    while(1) {
+        if(mic->read()) {
+            cmd = CMD_PAUSE;
+            xQueueSend(xCommandQueue, &cmd, 0);
+            printf("System paused by microphone.\n");
+            
+            // Wait for sound to stop
+            while(mic->read()) {
+                vTaskDelay(pdMS_TO_TICKS(10));
+            }
+            
+            cmd = CMD_RESUME;
+            xQueueSend(xCommandQueue, &cmd, 0);
+            printf("System resumed.\n");
+        }
+        vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
 
 int main() {
     stdio_init_all();
 
-    // Initialize devices
-    L298NMotor motor(MOTOR_ENABLE_PIN, MOTOR_IN1_PIN, MOTOR_IN2_PIN);
-    Ultrasonic_Init();
-    MG90SServo servo(SERVO_PIN);
-    infrared_sensor_init();
-    DigitalMicrophone mic(MICROPHONE_PIN);
+    // Create command queue
+    xCommandQueue = xQueueCreate(5, sizeof(Command_t));
 
-    // Set up microphone interrupt for both rising and falling edges
-    gpio_set_irq_enabled_with_callback(
-        MICROPHONE_PIN,
-        GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL,
-        true,
-        &microphone_isr
+    // Initialize devices
+    motor = new L298NMotor(MOTOR_ENABLE_PIN, MOTOR_IN1_PIN, MOTOR_IN2_PIN);
+    servo = new MG90SServo(SERVO_PIN);
+    mic = new DigitalMicrophone(MICROPHONE_PIN);
+    
+    Ultrasonic_Init();
+    infrared_sensor_init();
+
+    // Set initial motor state
+    motor->setDirection(true);
+    motor->enable();
+
+    // Create tasks
+    xTaskCreate(
+        vControlTask,
+        "Control",
+        configMINIMAL_STACK_SIZE,
+        NULL,
+        2,
+        &xControlTaskHandle
     );
 
-    // Start the motor
-    motor.setDirection(true);
-    motor.enable();
+    xTaskCreate(
+        vMicrophoneTask,
+        "Microphone",
+        configMINIMAL_STACK_SIZE,
+        NULL,
+        3,
+        &xMicrophoneTaskHandle
+    );
 
-    while (true) {
-        if (system_pause) {
-            // Pause the system
-            motor.stop();
-            servo.setPosition(1500); // Neutral position (1.5ms pulse width)
-        } else {
-            // System running
-            uint32_t distance = Ultrasonic_GetDistance();
-            int ir_value = infrared_sensor_read();
-            printf("Distance: %u cm, IR: %d\n", distance, ir_value);
+    // Start the scheduler
+    vTaskStartScheduler();
 
-            if (distance < 20) { // Ultrasonic detects an item within 20cm
-                motor.stop();
-                if (ir_value) { // Both sensors detect an item
-                    servo.setPosition(2500); // Turn servo left (2.5ms pulse width)
-                    printf("Turning left\n");
-                } else {
-                    servo.setPosition(0); // Turn servo right (0.5ms pulse width)
-                    printf("Turning right\n");
-                }
-            } else {
-                motor.enable();
-                servo.setPosition(1500); // Servo in neutral position
-            }
-        }
-
-        sleep_ms(100);
-    }
-
+    // Should never get here
+    while(1);
     return 0;
 }

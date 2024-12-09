@@ -6,6 +6,7 @@ add_executable(nano
     motor.cpp
     servo.cpp
     microphone.cpp
+    infrared_sensor.cpp
 )
 
 pico_set_program_name(nano "nano")
