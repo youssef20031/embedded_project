@@ -1,0 +1,4 @@
+[ZoneTransfer]
+ZoneId=3
+ReferrerUrl=https://www.freertos.org/
+HostUrl=https://objects.githubusercontent.com/github-production-release-asset-2e65be/318273159/462bca7c-5965-46af-ad83-f2f1e0a7541a?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=releaseassetproduction%2F20241209%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20241209T111010Z&X-Amz-Expires=300&X-Amz-Signature=f2f1cf5b2218f4fedbd01ae9a096f650197a8cafb6264a4fb398b796e40be430&X-Amz-SignedHeaders=host&response-content-disposition=attachment%3B%20filename%3DFreeRTOSv202406.01-LTS.zip&response-content-type=application%2Foctet-stream

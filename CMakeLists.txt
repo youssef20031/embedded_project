@@ -38,14 +38,18 @@ pico_sdk_init()
 # Add executable. Default name is the project name, version 0.1
 
 
+SET(FREERTOS_KERNEL_PATH ${CMAKE_CURRENT_SOURCE_DIR}/lib/FreeRTOS-Kernel)
+include(${FREERTOS_KERNEL_PATH}/portable/ThirdParty/GCC/RP2040/FreeRTOS_Kernel_import.cmake)
+
+# Add the executable target and specify source files
 add_executable(nano
-    nano.cpp
-    infrared_sensor.c
-    hc_sr04.cpp
-    ultrasonic.cpp
-    motor.cpp
-    servo.cpp
-    microphone.cpp
+    src/nano.cpp
+    src/infrared_sensor.c
+    src/hc_sr04.cpp
+    src/ultrasonic.cpp
+    src/motor.cpp
+    src/servo.cpp
+    src/microphone.cpp
     # Add other source files if necessary
 )
 
@@ -69,19 +73,27 @@ target_include_directories(nano PRIVATE
 )
 
 # Add any user requested libraries
-target_link_libraries(nano 
-        hardware_spi
-        hardware_i2c
-        hardware_dma
-        hardware_pio
-        hardware_interp
-        hardware_timer
-        hardware_watchdog
-        hardware_clocks
-        pico_stdlib
-        hardware_pwm
-        hardware_gpio
-        )
+target_link_libraries(nano
+    pico_stdlib
+    hardware_pwm
+    hardware_gpio
+    hardware_spi
+    hardware_i2c
+    hardware_dma
+    hardware_pio
+    hardware_interp
+    hardware_timer
+    hardware_watchdog
+    hardware_clocks
+    FreeRTOS-Kernel
+    FreeRTOS-Kernel-Heap4
+    # Add other required libraries
+)
+
+# After including FreeRTOS-Kernel
+target_compile_definitions(FreeRTOS-Kernel INTERFACE
+    FREERTOS_KERNEL_SMP=0
+)
 
 pico_add_extra_outputs(nano)
 
