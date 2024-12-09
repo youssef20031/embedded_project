@@ -41,7 +41,7 @@ uint32_t Ultrasonic_GetDistance(void) {
     // Calculate the distance in centimeters
     uint32_t distance = (duration / 2) / 29.1;
 
-    printf("Distance: %d cm\n", distance);
+    //printf("Distance: %d cm\n", distance);
 
     return distance;
 }

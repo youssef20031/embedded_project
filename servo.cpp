@@ -3,34 +3,34 @@
 #include "servo.h"
 #include <stdio.h>
 
-SG90Servo::SG90Servo(uint32_t pin) : gpio_pin(pin) {
+MG90SServo::MG90SServo(uint32_t pin) : gpio_pin(pin) {
     // Initialize GPIO for PWM
     gpio_set_function(gpio_pin, GPIO_FUNC_PWM);
     pwm_slice = pwm_gpio_to_slice_num(gpio_pin);
     pwm_channel = pwm_gpio_to_channel(gpio_pin);
 
-    // Set PWM frequency to 50Hz for SG90
+    // Set PWM frequency to 50Hz for MG90S
     uint32_t freq = 50;
-    wrap = 1024;
+    wrap = 20000; // 20ms period with 1MHz clock
     pwm_set_wrap(pwm_slice, wrap);
-    // Calculate and set the clock divider
-    float clock_divider = 125000000.0f / (freq * wrap); // 125MHz clock
+
+    // Set the clock divider to get a 1MHz PWM clock (125MHz / 125)
+    float clock_divider = 125.0f;
     pwm_set_clkdiv(pwm_slice, clock_divider);
 
-    // Initialize PWM to neutral position
-    setPosition(512);
+    // Initialize PWM to neutral position (1.5ms pulse width)
+    setPosition(1500);
     pwm_set_enabled(pwm_slice, true);
 }
 
-void SG90Servo::setPosition(uint32_t position) {
-    if (position > 1024) position = 1024;
-    // Map 0-1024 to pulse width (0.5ms to 2.5ms)
-    uint32_t pulse_width = (position * 2000) / 1024 + 500; // in microseconds
-    uint32_t level = (pulse_width * wrap) / 20000; // 20ms period
+void MG90SServo::setPosition(uint32_t pulse_width_us) {
+    // Ensure pulse width is within valid range (500us to 2500us)
+    if (pulse_width_us < 500) pulse_width_us = 500;
+    if (pulse_width_us > 2500) pulse_width_us = 2500;
 
-    // Ensure level does not exceed wrap
-    if (level > wrap) level = wrap;
+    // Set PWM channel level based on pulse width
+    uint32_t level = pulse_width_us; // Because PWM clock is 1MHz
 
     pwm_set_chan_level(pwm_slice, pwm_channel, level);
-    printf("Servo position set to %u (Pulse Width: %u us)\n", position, pulse_width);
+    printf("Servo pulse width set to %u us\n", pulse_width_us);
 }
