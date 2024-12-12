@@ -1,13 +1,11 @@
 #include "infrared_sensor.h"
 #include "pico/stdlib.h"
 
-#define SENSOR_PIN 6 // GPIO pin number
-
-void infrared_sensor_init(void) {
-    gpio_init(SENSOR_PIN);
-    gpio_set_dir(SENSOR_PIN, GPIO_IN);
+void infrared_sensor_init(uint32_t gpio_pin) {
+    gpio_init(gpio_pin);
+    gpio_set_dir(gpio_pin, GPIO_IN);
 }
 
-int infrared_sensor_read(void) {
-    return gpio_get(SENSOR_PIN);
+int infrared_sensor_read(uint32_t gpio_pin) {
+    return gpio_get(gpio_pin);
 }

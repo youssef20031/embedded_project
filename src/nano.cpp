@@ -65,7 +65,7 @@ void vControlTask(void *pvParameters)
 
         // Normal operation
         uint32_t distance = Ultrasonic_GetDistance();
-        int ir_value = infrared_sensor_read();
+        int ir_value = infrared_sensor_read(MICROPHONE_PIN);
         printf("Distance: %u cm, IR: %d\n", distance, ir_value);
 
         if (distance < 20)
@@ -99,7 +99,7 @@ void vControlTask(void *pvParameters)
             printf("Distance less than 20cm, waiting for IR sensor...\n");
 
             // Wait for the IR sensor to turn on
-            while (!infrared_sensor_read())
+            while (!infrared_sensor_read(MICROPHONE_PIN))
             {
                 vTaskDelay(pdMS_TO_TICKS(100)); // Delay to prevent busy-waiting
             }
@@ -182,7 +182,7 @@ int main()
     mic = new DigitalMicrophone(MICROPHONE_PIN);
 
     Ultrasonic_Init();
-    infrared_sensor_init();
+    infrared_sensor_init(MICROPHONE_PIN);
 
     // Set initial motor state
     motor->setDirection(true);
