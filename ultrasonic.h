@@ -3,9 +3,9 @@
 
 #include "stdint.h"
 
-// GPIO pins for the HC-SR04 sensor
-#define TRIG_PIN 16
-#define ECHO_PIN 17
+// GPIO pins for the HC-SR04` sensor
+#define TRIG_PIN 25
+#define ECHO_PIN 19
 
 // Initializes the ultrasonic sensor
 void Ultrasonic_Init(void);

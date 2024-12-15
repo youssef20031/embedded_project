@@ -15,14 +15,14 @@
 // GPIO pin definitions
 #define MOTOR_ENABLE_PIN 21
 #define MOTOR_IN1_PIN 20
-#define MOTOR_IN2_PIN 19
+#define MOTOR_IN2_PIN 18
 // Second motor GPIO pins
 #define MOTOR2_ENABLE_PIN 26
 #define MOTOR2_IN1_PIN 27
 #define MOTOR2_IN2_PIN 28
 #define SERVO_PIN 5
-#define IR_SENSOR_PIN 6
-#define MICROPHONE_PIN 25
+#define IR_SENSOR_PIN 15
+#define MICROPHONE_PIN 13
 
 // Task handles
 static TaskHandle_t xControlTaskHandle = NULL;
@@ -47,6 +47,7 @@ static DigitalMicrophone *mic;
 // Task for motor control and sensor readings
 void vControlTask(void *pvParameters)
 {
+    bool isPaused = false;
     while (1)
     {
         Command_t cmd;
@@ -59,83 +60,82 @@ void vControlTask(void *pvParameters)
                 motor->stop();
                 motor2->stop();
                 servo->setPosition(1500);
-                continue;
+                printf("Paused \n");
+                printf("---------------------------------------------- \n");
+                isPaused = true;
+            }
+            else if (cmd == CMD_RESUME)
+            {
+                printf("Resumed \n");
+                printf("---------------------------------------------- \n");
+                isPaused = false;
             }
         }
 
-        // Normal operation
-        uint32_t distance = Ultrasonic_GetDistance();
-        int ir_value = infrared_sensor_read(MICROPHONE_PIN);
-        printf("Distance: %u cm, IR: %d\n", distance, ir_value);
-
-        if (distance < 20)
+        if (!isPaused)
         {
-            // Stop the motors while waiting
-            motor2->stop();
+            // Normal operation
+            uint32_t distance = Ultrasonic_GetDistance();
+            int ir_value = infrared_sensor_read(IR_SENSOR_PIN);
+            printf("Distance: %u cm, IR: %d\n", distance, ir_value);
 
-            int time = 0;
-
-            printf("Moving the second Conveyor belt motor\n");
-
-            if (distance < 10)
+            if (distance < 20)
             {
-                // move motor2 for .5 seconds
-                motor2->enable();
-                motor2->setDirection(true);
-                time = 500;
-                vTaskDelay(pdMS_TO_TICKS(time));
+                // Stop the motors while waiting
+                //motor->stop();
                 motor2->stop();
+
+                int time = 0;
+
+                printf("Moving the second Conveyor belt motor\n");
+
+                if (distance < 10)
+                {
+                    // move motor2 for .5 seconds
+                    motor2->setDirection(true);
+                    motor2->enable();
+                    time = 1000;
+                    vTaskDelay(pdMS_TO_TICKS(time));
+                    motor2->stop();
+                }
+               
+
+                printf("Distance less than 20cm, waiting for IR sensor...\n");
+
+                // Wait for the IR sensor to turn on
+                while (infrared_sensor_read(IR_SENSOR_PIN))
+                {
+                    vTaskDelay(pdMS_TO_TICKS(100)); // Delay to prevent busy-waiting
+                }
+                motor->stop();
+
+                vTaskDelay(pdMS_TO_TICKS(250));
+
+                // IR sensor is on, turn the servo left
+                servo->setPosition(2500);
+                printf("Turning left\n");
+
+                // Optionally wait before resuming normal operation
+                vTaskDelay(pdMS_TO_TICKS(2000));
+
+                if (time == 1000)
+                {
+                    // move motor2 for .05 seconds
+                    motor2->setDirection(false);
+                    motor2->enable();
+                    vTaskDelay(pdMS_TO_TICKS(time));
+                    motor2->stop();
+                }
+
+                // Return to normal operation
+                servo->setPosition(1500);
+                motor->enable();
             }
             else
             {
-                // move motor2 for 1 seconds
-                motor2->enable();
-                motor2->setDirection(true);
-                time = 1000;
-                vTaskDelay(pdMS_TO_TICKS(time));
-                motor2->stop();
+                motor->enable();
+                servo->setPosition(1500);
             }
-            
-            printf("Distance less than 20cm, waiting for IR sensor...\n");
-
-            // Wait for the IR sensor to turn on
-            while (!infrared_sensor_read(MICROPHONE_PIN))
-            {
-                vTaskDelay(pdMS_TO_TICKS(100)); // Delay to prevent busy-waiting
-            }
-
-            // IR sensor is on, turn the servo left
-            servo->setPosition(2500);
-            printf("Turning left\n");
-
-            // Optionally wait before resuming normal operation
-            vTaskDelay(pdMS_TO_TICKS(500));
-
-            if (time == 500)
-            {
-                // move motor2 for .5 seconds
-                motor2->enable();
-                motor2->setDirection(false);
-                vTaskDelay(pdMS_TO_TICKS(time));
-                motor2->stop();
-            }
-            else if (time == 1000)
-            {
-                // move motor2 for .05 seconds
-                motor2->enable();
-                motor2->setDirection(false);
-                vTaskDelay(pdMS_TO_TICKS(time));
-                motor2->stop();
-            }
-
-            // Return to normal operation
-            servo->setPosition(1500);
-            motor->enable();
-        }
-        else
-        {
-            motor->enable();
-            servo->setPosition(1500);
         }
 
         vTaskDelay(pdMS_TO_TICKS(100));
@@ -148,14 +148,14 @@ void vMicrophoneTask(void *pvParameters)
     Command_t cmd;
     while (1)
     {
-        if (mic->read())
+        if (!mic->read())
         {
             cmd = CMD_PAUSE;
             xQueueSend(xCommandQueue, &cmd, 0);
             printf("System paused by microphone.\n");
 
             // Wait for sound to stop
-            while (mic->read())
+            while ((!mic->read()))
             {
                 vTaskDelay(pdMS_TO_TICKS(10));
             }
@@ -182,7 +182,7 @@ int main()
     mic = new DigitalMicrophone(MICROPHONE_PIN);
 
     Ultrasonic_Init();
-    infrared_sensor_init(MICROPHONE_PIN);
+    infrared_sensor_init(IR_SENSOR_PIN);
 
     // Set initial motor state
     motor->setDirection(true);
@@ -207,7 +207,6 @@ int main()
         3,
         &xMicrophoneTaskHandle);
 
-    // Start the scheduler
     vTaskStartScheduler();
 
     // Should never get here
