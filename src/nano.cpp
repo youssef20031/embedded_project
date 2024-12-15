@@ -23,6 +23,7 @@
 #define SERVO_PIN 5
 #define IR_SENSOR_PIN 15
 #define MICROPHONE_PIN 13
+#define LED_PIN 25
 
 // Task handles
 static TaskHandle_t xControlTaskHandle = NULL;
@@ -84,6 +85,7 @@ void vControlTask(void *pvParameters)
                 // Stop the motors while waiting
                 //motor->stop();
                 motor2->stop();
+                gpio_put(LED_PIN, 1);
 
                 int time = 0;
 
@@ -132,7 +134,8 @@ void vControlTask(void *pvParameters)
                 motor->enable();
             }
             else
-            {
+            {   
+                gpio_put(LED_PIN, 0);
                 motor->enable();
                 servo->setPosition(1500);
             }
@@ -171,6 +174,10 @@ void vMicrophoneTask(void *pvParameters)
 int main()
 {
     stdio_init_all();
+    // Inside main(), initialize the LED pin as output
+    gpio_init(LED_PIN);
+    gpio_set_dir(LED_PIN, GPIO_OUT);
+    gpio_put(LED_PIN, 0);
 
     // Create command queue
     xCommandQueue = xQueueCreate(5, sizeof(Command_t));
