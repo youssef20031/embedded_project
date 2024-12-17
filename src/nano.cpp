@@ -79,8 +79,9 @@ void vControlTask(void *pvParameters)
             uint32_t distance = Ultrasonic_GetDistance();
             int ir_value = infrared_sensor_read(IR_SENSOR_PIN);
             printf("Distance: %u cm, IR: %d\n", distance, ir_value);
+            int height = 10 - distance;
 
-            if (distance < 20)
+            if (distance <= 10)
             {
                 // Stop the motors while waiting
                 //motor->stop();
@@ -91,7 +92,7 @@ void vControlTask(void *pvParameters)
 
                 printf("Moving the second Conveyor belt motor\n");
 
-                if (distance < 10)
+                if (height <= 7)
                 {
                     // move motor2 for .5 seconds
                     motor2->setDirection(true);
