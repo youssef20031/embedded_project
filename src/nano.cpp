@@ -23,7 +23,7 @@
 #define SERVO_PIN 5
 #define IR_SENSOR_PIN 15
 #define MICROPHONE_PIN 13
-#define LED_PIN 25
+#define LED_PIN 7
 
 // Task handles
 static TaskHandle_t xControlTaskHandle = NULL;
@@ -79,9 +79,9 @@ void vControlTask(void *pvParameters)
             uint32_t distance = Ultrasonic_GetDistance();
             int ir_value = infrared_sensor_read(IR_SENSOR_PIN);
             printf("Distance: %u cm, IR: %d\n", distance, ir_value);
-            int height = 10 - distance;
+            int height = 7 - distance;
 
-            if (distance <= 10)
+            if (distance <= 7)
             {
                 // Stop the motors while waiting
                 //motor->stop();
@@ -92,7 +92,7 @@ void vControlTask(void *pvParameters)
 
                 printf("Moving the second Conveyor belt motor\n");
 
-                if (height <= 7)
+                if (height <= 4)
                 {
                     // move motor2 for .5 seconds
                     motor2->setDirection(true);
@@ -103,13 +103,14 @@ void vControlTask(void *pvParameters)
                 }
                
 
-                printf("Distance less than 20cm, waiting for IR sensor...\n");
+                printf("Distance less than 9cm, waiting for IR sensor...\n");
 
                 // Wait for the IR sensor to turn on
                 while (infrared_sensor_read(IR_SENSOR_PIN))
                 {
                     vTaskDelay(pdMS_TO_TICKS(100)); // Delay to prevent busy-waiting
                 }
+                vTaskDelay(pdMS_TO_TICKS(250));
                 motor->stop();
 
                 vTaskDelay(pdMS_TO_TICKS(250));
