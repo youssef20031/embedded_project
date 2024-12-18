@@ -1,5 +1,3 @@
-// infrared_sensor.h
-
 #ifndef INFRARED_SENSOR_H
 #define INFRARED_SENSOR_H
 
@@ -7,8 +5,10 @@
 extern "C" {
 #endif
 
-void infrared_sensor_init(void);
-int infrared_sensor_read(void);
+#include <stdint.h>
+
+void infrared_sensor_init(uint32_t gpio_pin);
+int infrared_sensor_read(uint32_t gpio_pin);
 
 #ifdef __cplusplus
 }
